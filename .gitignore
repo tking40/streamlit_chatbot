@@ -1,0 +1,3 @@
+# Ignore 'logs' folder
+chat_history/
+.env
