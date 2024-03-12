@@ -48,10 +48,9 @@ def generate_log_name():
     return response.choices[0].message.content
 
 
-# # Writing to a file
 with st.sidebar.popover("Load from file"):
     st.markdown("load from")
-    filenames = os.listdir(CHAT_HISTORY_DIR)
+    filenames = [""] + os.listdir(CHAT_HISTORY_DIR)
     filename = st.selectbox("Select a file", filenames)
     if filename:
         filepath = os.path.join(CHAT_HISTORY_DIR, filename)
