@@ -2,6 +2,7 @@ import openai
 import anthropic
 from dotenv import load_dotenv
 from typing import List, Any
+import json
 
 load_dotenv()
 
@@ -37,6 +38,17 @@ class ClientInterface:
 
     def reset(self):
         self.messages = []
+
+    def save_to_file(self, filepath):
+        assert (
+            self.messages[-1]["role"] != "user"
+        ), "Last message was from user, this shouldn't happen!"
+        with open(filepath, "w") as file:
+            json.dump(self.messages, file)
+
+    def load_from_file(self, filepath):
+        with open(filepath, "r") as file:
+            self.messages = json.load(file)
 
 
 class AnthropicClient(ClientInterface):
