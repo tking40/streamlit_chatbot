@@ -1,3 +1,4 @@
 # Ignore 'logs' folder
 chat_history/
 .env
+__pycache__/
