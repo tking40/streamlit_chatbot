@@ -16,6 +16,8 @@ ANTHROPIC_MODELS = [
 
 class ClientInterface:
     def __init__(self, client_api: Any, models: List[str]):
+        if not models:
+            raise ValueError("models list cannot be empty")
         self.client_api = client_api
         self.models = models
         self.model = models[0]

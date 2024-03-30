@@ -12,6 +12,12 @@ class TestClientInterface_Init(unittest.TestCase):
         self.assertEqual(client.model, models[0])
         self.assertEqual(client.client_api, None)
 
+    def test_init_with_empty_models(self):
+        client_api = None
+        models = []
+        with self.assertRaises(ValueError):
+            ClientInterface(client_api, models)
+
 
 class TestClientInterface_Methods(unittest.TestCase):
     @classmethod
