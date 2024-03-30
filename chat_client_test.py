@@ -55,9 +55,9 @@ class TestClientInterface_ChatMethods(unittest.TestCase):
         with self.assertRaises(NotImplementedError):
             self.client.get_response()
 
-    def test_stream_response_not_implemented(self):
+    def test_stream_generator_not_implemented(self):
         with self.assertRaises(NotImplementedError):
-            self.client.stream_response()
+            self.client.stream_generator()
 
     def test_prompt(self):
         # Arrange - input prompt and expected output

@@ -30,7 +30,7 @@ class ClientInterface:
     def get_response(self):
         raise NotImplementedError("get_response not implemented!")
 
-    def stream_response(self):
+    def stream_generator(self):
         raise NotImplementedError("stream_response not implemented!")
 
     def prompt(self, prompt: str) -> None:
@@ -65,6 +65,24 @@ class AnthropicClient(ClientInterface):
         self.add_message(role="assistant", message=message)
         return message
 
+    def stream_generator(self):
+        stream_manager = self.client_api.messages.stream(
+            max_tokens=1024,
+            messages=self.messages,
+            model=self.model,
+        )
+
+        # Enter the context to get the MessageStream
+        stream = stream_manager.__enter__()
+
+        try:
+            # Yield text from the stream
+            for text in stream.text_stream:
+                yield text
+        finally:
+            # Exit the context and clean up the stream
+            stream_manager.__exit__(None, None, None)
+
 
 class OpenAIClient(ClientInterface):
     def __init__(self):
@@ -80,10 +98,28 @@ class OpenAIClient(ClientInterface):
         self.add_message(role="assistant", message=message)
         return message
 
+    def stream_generator(self):
+        stream = self.client_api.chat.completions.create(
+            model=self.model,
+            messages=self.messages,
+            stream=True,
+        )
+        for chunk in stream:
+            text = chunk.choices[0].delta.content
+            if text:
+                yield text
+
 
 # # Example:
+# print("--- Anthropic ---")
 # client_api = AnthropicClient()
 # client_api.prompt("Hello")
-# print(client_api.get_response())
-# client_api.prompt("What is 2 + 2?")
-# print(client_api.get_response())
+# for chunk in client_api.stream_generator():
+#     print(chunk, end="", flush=True)
+# print("")
+# print("--- OpenAI ---")
+# client_api = OpenAIClient()
+# client_api.prompt("Hello")
+# for chunk in client_api.stream_generator():
+#     print(chunk, end="", flush=True)
+# print("")
