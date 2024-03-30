@@ -48,59 +48,75 @@ def generate_log_name():
     return response.choices[0].message.content
 
 
-with st.sidebar.popover("Load from file"):
-    st.markdown("load from")
-    filenames = [""] + os.listdir(CHAT_HISTORY_DIR)
-    filename = st.selectbox("Select a file", filenames)
-    if filename:
-        filepath = os.path.join(CHAT_HISTORY_DIR, filename)
-        st.session_state.loaded_file = filename
-        if st.button("Load"):
-            with open(filepath, "r") as file:
-                loaded_dict = json.load(file)
-                st.session_state.messages = loaded_dict
+tab1, tab2 = st.tabs(["chat", "dalle"])
 
+with tab1:
+    with st.sidebar.popover("Load from file"):
+        st.markdown("load from")
+        filenames = [""] + os.listdir(CHAT_HISTORY_DIR)
+        filename = st.selectbox("Select a file", filenames)
+        if filename:
+            filepath = os.path.join(CHAT_HISTORY_DIR, filename)
+            st.session_state.loaded_file = filename
+            if st.button("Load"):
+                with open(filepath, "r") as file:
+                    loaded_dict = json.load(file)
+                    st.session_state.messages = loaded_dict
 
-with st.sidebar.popover("Save chat to file"):
-    st.markdown("name")
-    name = st.text_input("(optional) filename", value=st.session_state.loaded_file)
+    with st.sidebar.popover("Save chat to file"):
+        st.markdown("name")
+        name = st.text_input("(optional) filename", value=st.session_state.loaded_file)
 
-    ymd = datetime.now().strftime("%y-%m-%d_%H-%M-%S")
+        ymd = datetime.now().strftime("%y-%m-%d_%H-%M-%S")
 
-    if st.button(f"Save"):
-        if not name:
-            name = generate_log_name()
-        if not ".json" in filename:
-            filename = f"{ymd}_{name}.json"
-        st.session_state.loaded_file = filename
-        filepath = os.path.join(CHAT_HISTORY_DIR, filename)
-        with open(filepath, "w") as file:
-            json.dump(st.session_state.messages, file)
-        st.write(f"saved to: {filepath}")
+        if st.button(f"Save"):
+            if not name:
+                name = generate_log_name()
+            if not ".json" in filename:
+                filename = f"{ymd}_{name}.json"
+            st.session_state.loaded_file = filename
+            filepath = os.path.join(CHAT_HISTORY_DIR, filename)
+            with open(filepath, "w") as file:
+                json.dump(st.session_state.messages, file)
+            st.write(f"saved to: {filepath}")
 
-if st.sidebar.button("New Chat"):
-    init()
+    if st.sidebar.button("New Chat"):
+        init()
 
+    # Display chat messages from history on app rerun
+    for message in st.session_state.messages:
+        with st.chat_message(message["role"]):
+            st.markdown(message["content"])
 
-# Display chat messages from history on app rerun
-for message in st.session_state.messages:
-    with st.chat_message(message["role"]):
-        st.markdown(message["content"])
+    # Accept user input
+    if prompt := st.chat_input("What is up?"):
+        st.session_state.messages.append({"role": "user", "content": prompt})
+        with st.chat_message("user"):
+            st.markdown(prompt)
 
-# Accept user input
-if prompt := st.chat_input("What is up?"):
-    st.session_state.messages.append({"role": "user", "content": prompt})
-    with st.chat_message("user"):
-        st.markdown(prompt)
+        with st.chat_message("assistant"):
+            stream = client.chat.completions.create(
+                model=st.session_state["openai_model"],
+                messages=[
+                    {"role": m["role"], "content": m["content"]}
+                    for m in st.session_state.messages
+                ],
+                stream=True,
+            )
+            response = st.write_stream(stream)
+        st.session_state.messages.append({"role": "assistant", "content": response})
 
-    with st.chat_message("assistant"):
-        stream = client.chat.completions.create(
-            model=st.session_state["openai_model"],
-            messages=[
-                {"role": m["role"], "content": m["content"]}
-                for m in st.session_state.messages
-            ],
-            stream=True,
-        )
-        response = st.write_stream(stream)
-    st.session_state.messages.append({"role": "assistant", "content": response})
+with tab2:
+    prompt = st.text_input("prompt")
+    if st.button("generate"):
+        with st.spinner("Generating..."):
+            response = client.images.generate(
+                model="dall-e-3",
+                prompt=prompt,
+                size="1024x1024",
+                quality="standard",
+                n=1,
+            )
+
+        image_url = response.data[0].url
+        st.image(image_url)
