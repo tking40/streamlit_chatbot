@@ -5,7 +5,7 @@ import os
 load_dotenv()
 client = OpenAI(api_key=os.getenv("OPENAI_KEY"))
 
-MODEL = "gpt-4-1106-preview"
+MODEL = "gpt-3.5-turbo"
 
 
 def fetch_response(messages, model):
