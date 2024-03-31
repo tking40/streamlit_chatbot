@@ -33,7 +33,7 @@ st.title("chatting")
 
 
 def generate_log_name():
-    prompt = "Please summarize our conversation so that it fits within a short filename. For example, if we talked about turtle migration, use this format: 'turtle_migration'"
+    prompt = "Please summarize our conversation so that it fits within a short filename. For example, if we talked about turtle migration, use this format: 'turtle_migration', with no special characters"
     if not st.session_state.messages:
         return "empty"
 
@@ -97,6 +97,15 @@ def chat_sidebar():
 
     st.sidebar.write("Current tokens", client.count_tokens())
 
+    st.sidebar.markdown(
+        """
+    ### Usage \n
+    [Anthropic Usage](https://console.anthropic.com/settings/plans)\n
+    [OpenAI Usage](https://platform.openai.com/usage)\n
+    [Google is free rn](https://ai.google.dev/pricing)
+    """
+    )
+
     return client
 
 
@@ -133,6 +142,7 @@ def chat_app():
         client.add_message(role=client.assistant_role, content=response)
 
     # Chat finished, save messages
+    # note: client should be writing to same message list, but observed odd behavior without this
     st.session_state.messages = client.get_messages()
 
 

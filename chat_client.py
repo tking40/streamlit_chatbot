@@ -47,19 +47,21 @@ class ClientInterface:
         self.client_api = client_api
         self.models = models
         self.set_model(models[0])
+        # Messages are the only private member so far, as the format will be unique to each client.
+        # Setter/getter methods will convert as necessary to the shared format
         self.set_messages(messages)
         self.max_tokens = max_tokens
         self.assistant_role = assistant_role
         self.user_role = user_role
 
     def add_message(self, role: str, content: str):
-        self.messages.append({"role": role, "content": content})
+        self._messages.append({"role": role, "content": content})
 
     def get_messages(self):
-        return self.messages
+        return self._messages
 
     def set_messages(self, messages):
-        self.messages = messages
+        self._messages = messages
 
     def set_model(self, model_name):
         self.model_name = model_name
@@ -74,7 +76,7 @@ class ClientInterface:
         self.add_message(role=self.user_role, content=prompt)
 
     def reset(self):
-        self.messages = []
+        self._messages = []
 
     def save_to_file(self, filepath):
         messages = self.get_messages()
@@ -105,7 +107,7 @@ class AnthropicClient(ClientInterface):
         response = self.client_api.messages.create(
             model=self.model_name,
             max_tokens=self.max_tokens,
-            messages=self.messages,
+            messages=self._messages,
         )
         message = response.content[0].text
         self.add_message(role="assistant", content=message)
@@ -114,7 +116,7 @@ class AnthropicClient(ClientInterface):
     def stream_generator(self):
         stream_manager = self.client_api.messages.stream(
             max_tokens=self.max_tokens,
-            messages=self.messages,
+            messages=self._messages,
             model=self.model_name,
         )
 
@@ -140,7 +142,7 @@ class OpenAIClient(ClientInterface):
     def get_response(self) -> str:
         response = self.client_api.chat.completions.create(
             model=self.model_name,
-            messages=self.messages,
+            messages=self._messages,
             stream=False,
             max_tokens=self.max_tokens,
         )
@@ -151,7 +153,7 @@ class OpenAIClient(ClientInterface):
     def stream_generator(self):
         stream = self.client_api.chat.completions.create(
             model=self.model_name,
-            messages=self.messages,
+            messages=self._messages,
             stream=True,
             max_tokens=self.max_tokens,
         )
@@ -191,25 +193,25 @@ class GoogleClient(ClientInterface):
         return "Google"
 
     def add_message(self, role: str, content: str):
-        self.messages.append({"role": role, "parts": [content]})
+        self._messages.append({"role": role, "parts": [content]})
 
     def get_messages(self):
-        return chat_history_to_messages(self.messages)
+        return chat_history_to_messages(self._messages)
 
     def set_messages(self, messages):
-        self.messages = messages_to_chat_history(messages)
+        self._messages = messages_to_chat_history(messages)
 
     def set_model(self, model_name):
         self.model_name = model_name
         self.client_api = genai.GenerativeModel(self.model_name)
 
     def get_response(self) -> str:
-        response = self.client_api.generate_content(self.messages)
+        response = self.client_api.generate_content(self._messages)
         self.add_message(role=self.assistant_role, content=response.text)
         return response.text
 
     def stream_generator(self):
-        stream = self.client_api.generate_content(self.messages, stream=True)
+        stream = self.client_api.generate_content(self._messages, stream=True)
         for chunk in stream:
             yield chunk.text
 
