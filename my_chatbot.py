@@ -1,13 +1,10 @@
-from openai import OpenAI
 import os
 import streamlit as st
-import json
 from datetime import datetime
-import tiktoken
 
 from dotenv import load_dotenv
 
-from chat_client import AnthropicClient, OpenAIClient
+from chat_client import AnthropicClient, OpenAIClient, GoogleClient
 
 load_dotenv()
 
@@ -15,6 +12,7 @@ load_dotenv()
 clients = {
     "Open AI": OpenAIClient,
     "Claude": AnthropicClient,
+    "Google": GoogleClient,
 }
 
 CHAT_HISTORY_DIR = "./chat_history"
@@ -34,28 +32,12 @@ st.set_page_config(layout="wide")
 st.title("chatting")
 
 
-def num_tokens_from_messages(messages):
-    encoding = tiktoken.get_encoding("cl100k_base")
-    tokens_per_message = 4
-    tokens_per_name = 1
-    num_tokens = 0
-    for message in messages:
-        num_tokens += tokens_per_message
-        for key, value in message.items():
-            num_tokens += len(encoding.encode(value))
-            if key == "name":
-                num_tokens += tokens_per_name
-    num_tokens += 3  # every reply is primed with <|start|>assistant<|message|>
-    return num_tokens
-
-
 def generate_log_name():
     prompt = "Please summarize our conversation so that it fits within a short filename. For example, if we talked about turtle migration, use this format: 'turtle_migration'"
     if not st.session_state.messages:
         return "empty"
 
-    temp_client = OpenAIClient(messages=st.session_state.messages.copy())
-    temp_client.model = "gpt-3.5-turbo"
+    temp_client = GoogleClient(messages=st.session_state.messages.copy())
     temp_client.prompt(prompt)
 
     return temp_client.get_response()
@@ -74,7 +56,8 @@ def chat_sidebar():
 
     client = get_client()
 
-    client.model = st.sidebar.selectbox("Choose model:", client.models, key="model")
+    model_name = st.sidebar.selectbox("Choose model:", client.models, key="model")
+    client.set_model(model_name)
 
     with st.sidebar.expander("Advanced Options"):
         client.max_tokens = st.slider(
@@ -112,7 +95,7 @@ def chat_sidebar():
             client.save_to_file(filepath)
             st.write(f"saved to: {filepath}")
 
-    st.sidebar.write("Current tokens", num_tokens_from_messages(client.messages))
+    st.sidebar.write("Current tokens", client.count_tokens())
 
     return client
 
@@ -120,36 +103,37 @@ def chat_sidebar():
 def chat_app():
     client = chat_sidebar()
 
+    # Needed this to get consistent ordering of the chat elements
     container_A = st.container()
     container_B = st.container()
 
     # Display chat messages from history on app rerun
     with container_A:
-        for message in client.messages:
+        for message in client.get_messages():
             chat_msg = st.chat_message(message["role"])
             chat_msg.markdown(message["content"])
 
     # Accept user input
-    # with
     with container_B:
-        prompt = st.chat_input("What is up?")
+        prompt = st.chat_input("Type Here")
     if prompt:
         client.prompt(prompt)
 
-        # Write p
+        # Display user input
         with container_A:
             chat_msg = st.chat_message("user")
             chat_msg.markdown(prompt)
 
+        # Get and display client response
         with container_A:
             stream = client.stream_generator()
             chat_msg = st.chat_message("assistant")
             response = chat_msg.write_stream(stream)
 
-        client.add_message(role="assistant", message=response)
+        client.add_message(role=client.assistant_role, content=response)
 
     # Chat finished, save messages
-    st.session_state.messages = client.messages
+    st.session_state.messages = client.get_messages()
 
 
 tab1, tab2 = st.tabs(["chat", "dalle"])
