@@ -34,6 +34,21 @@ st.set_page_config(layout="wide")
 st.title("chatting")
 
 
+def num_tokens_from_messages(messages):
+    encoding = tiktoken.get_encoding("cl100k_base")
+    tokens_per_message = 4
+    tokens_per_name = 1
+    num_tokens = 0
+    for message in messages:
+        num_tokens += tokens_per_message
+        for key, value in message.items():
+            num_tokens += len(encoding.encode(value))
+            if key == "name":
+                num_tokens += tokens_per_name
+    num_tokens += 3  # every reply is primed with <|start|>assistant<|message|>
+    return num_tokens
+
+
 def generate_log_name():
     prompt = "Please summarize our conversation so that it fits within a short filename. For example, if we talked about turtle migration, use this format: 'turtle_migration'"
     if not st.session_state.messages:
@@ -97,6 +112,8 @@ def chat_sidebar():
             client.save_to_file(filepath)
             st.write(f"saved to: {filepath}")
 
+    st.sidebar.write("Current tokens", num_tokens_from_messages(client.messages))
+
     return client
 
 
@@ -132,7 +149,7 @@ def chat_app():
         client.add_message(role="assistant", message=response)
 
     # Chat finished, save messages
-    # st.session_state.messages = client.messages
+    st.session_state.messages = client.messages
 
 
 tab1, tab2 = st.tabs(["chat", "dalle"])

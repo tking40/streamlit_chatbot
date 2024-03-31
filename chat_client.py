@@ -7,7 +7,7 @@ import json
 load_dotenv()
 
 
-OPENAI_MODELS = ["gpt-3.5-turbo", "gpt-4-1106-preview", "gpt-4"]
+OPENAI_MODELS = ["gpt-3.5-turbo", "gpt-4-0125-preview", "gpt-4"]
 ANTHROPIC_MODELS = [
     "claude-3-haiku-20240307",
     "claude-3-sonnet-20240229",
