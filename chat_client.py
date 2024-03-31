@@ -219,6 +219,9 @@ class GoogleClient(ClientInterface):
         for chunk in stream:
             yield chunk.text
 
+    def count_tokens(self):
+        return self.client_api.count_tokens(self._messages).total_tokens
+
 
 if __name__ == "__main__":
     from dotenv import load_dotenv
