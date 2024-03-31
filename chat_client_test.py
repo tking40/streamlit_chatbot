@@ -12,7 +12,7 @@ class TestClientInterface_Init(unittest.TestCase):
         client = ClientInterface(client_api, models)
 
         self.assertEqual(client.models, models)
-        self.assertEqual(client.model, models[0])
+        self.assertEqual(client.model_name, models[0])
         self.assertEqual(client.client_api, None)
 
     def test_init_with_empty_models(self):
@@ -41,15 +41,29 @@ class TestClientInterface_ChatMethods(unittest.TestCase):
         expected_message_2 = "hi there"
 
         # Act - add messages
-        self.client.add_message(role=expected_role_1, message=expected_message_1)
-        self.client.add_message(role=expected_role_2, message=expected_message_2)
+        self.client.add_message(role=expected_role_1, content=expected_message_1)
+        self.client.add_message(role=expected_role_2, content=expected_message_2)
 
         # Assert - messages added correctly
-        self.assertEqual(len(self.client.messages), 2)
-        self.assertEqual(self.client.messages[0]["role"], expected_role_1)
-        self.assertEqual(self.client.messages[0]["content"], expected_message_1)
-        self.assertEqual(self.client.messages[1]["role"], expected_role_2)
-        self.assertEqual(self.client.messages[1]["content"], expected_message_2)
+        messages = self.client.get_messages()
+        self.assertEqual(len(messages), 2)
+        self.assertEqual(messages[0]["role"], expected_role_1)
+        self.assertEqual(messages[0]["content"], expected_message_1)
+        self.assertEqual(messages[1]["role"], expected_role_2)
+        self.assertEqual(messages[1]["content"], expected_message_2)
+
+    def test_set_get_messages(self):
+        # Arrange
+        expected_messages = [
+            {"role": "user", "content": "input"},
+            {"role": "assistant", "content": "output"},
+        ]
+
+        # Act
+        self.client.set_messages(expected_messages)
+
+        # Assert
+        self.assertEqual(self.client.get_messages(), expected_messages)
 
     def test_get_response_not_implemented(self):
         with self.assertRaises(NotImplementedError):
@@ -68,17 +82,17 @@ class TestClientInterface_ChatMethods(unittest.TestCase):
         self.client.prompt(prompt)
 
         # Assert - after prompt, stored messages contain prompt
-        self.assertEqual(self.client.messages, expected_messages)
+        self.assertEqual(self.client.get_messages(), expected_messages)
 
     def test_reset(self):
         # Arrange - add messages to object
-        self.client.messages = [{"role": "user", "content": "test"}]
+        self.client.set_messages([{"role": "user", "content": "test"}])
 
         # Act - reset class
         self.client.reset()
 
         # Assert - messages are empty
-        self.assertEqual(len(self.client.messages), 0)
+        self.assertEqual(len(self.client.get_messages()), 0)
 
 
 class TestClientInterface_FileMethods(unittest.TestCase):
@@ -100,7 +114,7 @@ class TestClientInterface_FileMethods(unittest.TestCase):
     def test_save_to_file_success(self):
         # Arrange - Set up messages and filepath
         expected_messages = [{"role": "assistant", "content": "test"}]
-        self.client.messages = expected_messages
+        self.client.set_messages(expected_messages)
         filepath = os.path.join(self.workspace.name, "test_save.json")
 
         # Act - Save messages to file
@@ -113,7 +127,7 @@ class TestClientInterface_FileMethods(unittest.TestCase):
 
     def test_save_to_file_failure(self):
         # Arrange - Set up expected messages and filepath
-        self.client.messages = [{"role": "user", "content": "test"}]
+        self.client.set_messages([{"role": "user", "content": "test"}])
         filepath = os.path.join(self.workspace.name, "test_save.json")
 
         # Assert - raise AssertionError when trying to save messages with last message from user
@@ -131,7 +145,7 @@ class TestClientInterface_FileMethods(unittest.TestCase):
         self.client.load_from_file(filepath)
 
         # Assert - loaded file messages should match expected
-        self.assertEqual(self.client.messages, expected_messages)
+        self.assertEqual(self.client.get_messages(), expected_messages)
 
 
 if __name__ == "__main__":
