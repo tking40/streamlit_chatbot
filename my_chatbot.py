@@ -3,6 +3,7 @@ import os
 import streamlit as st
 import json
 from datetime import datetime
+import tiktoken
 
 from dotenv import load_dotenv
 
@@ -18,39 +19,31 @@ clients = {
 
 CHAT_HISTORY_DIR = "./chat_history"
 
-if "messages" not in st.session_state:
-    st.session_state.messages = []
-st.set_page_config(layout="wide")
-
-
-st.title("chatting")
-
 
 def reset():
     st.session_state.messages = []
     st.session_state.loaded_file = ""
 
 
-# # Initialize chat history
 if "messages" not in st.session_state:
     reset()
-# st.session_state["openai_model"] = st.sidebar.selectbox("Choose model:", MODELS)
+    st.session_state.max_tokens = 1024
+st.set_page_config(layout="wide")
 
 
-# def generate_log_name():
-#     prompt = "Please summarize our conversation so that it fits within a short filename. For example, if we talked about turtle migration, use this format: 'turtle_migration'"
-#     if st.session_state.messages:
-#         messages = st.session_state.messages.copy()
-#     else:
-#         return "empty"
-#     messages.append({"role": "user", "content": prompt})
-#     response = client.chat.completions.create(
-#         model=st.session_state["openai_model"],
-#         messages=[{"role": m["role"], "content": m["content"]} for m in messages],
-#         stream=False,
-#     )
+st.title("chatting")
 
-#     return response.choices[0].message.content
+
+def generate_log_name():
+    prompt = "Please summarize our conversation so that it fits within a short filename. For example, if we talked about turtle migration, use this format: 'turtle_migration'"
+    if not st.session_state.messages:
+        return "empty"
+
+    temp_client = OpenAIClient(messages=st.session_state.messages.copy())
+    temp_client.model = "gpt-3.5-turbo"
+    temp_client.prompt(prompt)
+
+    return temp_client.get_response()
 
 
 def get_client():
@@ -67,35 +60,42 @@ def chat_sidebar():
     client = get_client()
 
     client.model = st.sidebar.selectbox("Choose model:", client.models, key="model")
-    # with st.sidebar.popover("Load from file"):
-    #     st.markdown("load from")
-    #     filenames = [""] + os.listdir(CHAT_HISTORY_DIR)
-    #     filename = st.selectbox("Select a file", filenames)
-    #     if filename:
-    #         filepath = os.path.join(CHAT_HISTORY_DIR, filename)
-    #         st.session_state.loaded_file = filename
-    #         if st.button("Load"):
-    #             client.load_from_file(filepath)
-    #             # with open(filepath, "r") as file:
-    #             #     loaded_dict = json.load(file)
-    #             #     st.session_state.messages = loaded_dict
 
-    # with st.sidebar.popover("Save chat to file"):
-    #     st.markdown("name")
-    #     name = st.text_input("(optional) filename", value=st.session_state.loaded_file)
+    with st.sidebar.expander("Advanced Options"):
+        client.max_tokens = st.slider(
+            "Max response tokens:",
+            min_value=128,
+            max_value=1024,
+            step=64,
+            key="max_tokens",
+        )
 
-    #     ymd = datetime.now().strftime("%y-%m-%d_%H-%M-%S")
+    with st.sidebar.popover("Load from file"):
+        st.markdown("load from")
+        filenames = [""] + os.listdir(CHAT_HISTORY_DIR)
+        filename = st.selectbox("Select a file", filenames)
+        if filename:
+            filepath = os.path.join(CHAT_HISTORY_DIR, filename)
+            st.session_state.loaded_file = filename
+            if st.button("Load"):
+                client.load_from_file(filepath)
 
-    #     if st.button(f"Save"):
-    #         if not name:
-    #             name = generate_log_name()
-    #         if not ".json" in filename:
-    #             filename = f"{ymd}_{name}.json"
-    #         st.session_state.loaded_file = filename
-    #         filepath = os.path.join(CHAT_HISTORY_DIR, filename)
-    #         with open(filepath, "w") as file:
-    #             json.dump(st.session_state.messages, file)
-    #         st.write(f"saved to: {filepath}")
+    with st.sidebar.popover("Save chat to file"):
+        st.markdown("name")
+        if st.button("generate"):
+            st.session_state.loaded_file = generate_log_name()
+
+        name = st.text_input("(optional) filename", value=st.session_state.loaded_file)
+
+        ymd = datetime.now().strftime("%y-%m-%d_%H-%M-%S")
+
+        if st.button(f"Save"):
+            if not ".json" in filename:
+                filename = f"{ymd}_{name}.json"
+            st.session_state.loaded_file = filename
+            filepath = os.path.join(CHAT_HISTORY_DIR, filename)
+            client.save_to_file(filepath)
+            st.write(f"saved to: {filepath}")
 
     return client
 
@@ -132,7 +132,7 @@ def chat_app():
         client.add_message(role="assistant", message=response)
 
     # Chat finished, save messages
-    st.session_state.messages = client.messages
+    # st.session_state.messages = client.messages
 
 
 tab1, tab2 = st.tabs(["chat", "dalle"])
@@ -143,7 +143,7 @@ with tab1:
 with tab2:
     prompt = st.text_input("prompt")
     client = OpenAIClient()
-    if st.button("generate"):
+    if st.button("generate image"):
         with st.spinner("Generating..."):
             response = client.client_api.images.generate(
                 model="dall-e-3",

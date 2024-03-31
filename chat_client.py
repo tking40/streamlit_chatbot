@@ -16,13 +16,16 @@ ANTHROPIC_MODELS = [
 
 
 class ClientInterface:
-    def __init__(self, client_api: Any, models: List[str], messages=[]):
+    def __init__(
+        self, client_api: Any, models: List[str], messages=[], max_tokens=1024
+    ):
         if not models:
             raise ValueError("models list cannot be empty")
         self.client_api = client_api
         self.models = models
         self.model = models[0]
         self.messages = messages
+        self.max_tokens = max_tokens
 
     def add_message(self, role: str, message: str):
         self.messages.append({"role": role, "content": message})
@@ -63,7 +66,7 @@ class AnthropicClient(ClientInterface):
     def get_response(self) -> str:
         response = self.client_api.messages.create(
             model=self.model,
-            max_tokens=1024,
+            max_tokens=self.max_tokens,
             messages=self.messages,
         )
         message = response.content[0].text
@@ -72,7 +75,7 @@ class AnthropicClient(ClientInterface):
 
     def stream_generator(self):
         stream_manager = self.client_api.messages.stream(
-            max_tokens=1024,
+            max_tokens=self.max_tokens,
             messages=self.messages,
             model=self.model,
         )
@@ -101,6 +104,7 @@ class OpenAIClient(ClientInterface):
             model=self.model,
             messages=self.messages,
             stream=False,
+            max_tokens=self.max_tokens,
         )
         message = response.choices[0].message.content
         self.add_message(role="assistant", message=message)
@@ -111,6 +115,7 @@ class OpenAIClient(ClientInterface):
             model=self.model,
             messages=self.messages,
             stream=True,
+            max_tokens=self.max_tokens,
         )
         for chunk in stream:
             text = chunk.choices[0].delta.content
