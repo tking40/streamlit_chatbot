@@ -43,6 +43,7 @@ class ClientInterface:
             raise ValueError("models list cannot be empty")
         self.client_api = client_api
         self.models = models
+        self.model_name = None
         self.set_model(models[0])
         # Messages are the only private member so far, as the format will be unique to each client.
         # Setter/getter methods will convert as necessary to the shared format
@@ -63,6 +64,8 @@ class ClientInterface:
         self._messages = messages
 
     def set_model(self, model_name):
+        if self.model_name == model_name:
+            return
         self.model_name = model_name
 
     def get_response(self):
@@ -201,6 +204,8 @@ class GoogleClient(ClientInterface):
         self._messages = messages_to_chat_history(messages)
 
     def set_model(self, model_name):
+        if self.model_name == model_name:
+            return
         self.model_name = model_name
         self.client_api = genai.GenerativeModel(self.model_name)
 
