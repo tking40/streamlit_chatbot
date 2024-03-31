@@ -16,13 +16,13 @@ ANTHROPIC_MODELS = [
 
 
 class ClientInterface:
-    def __init__(self, client_api: Any, models: List[str]):
+    def __init__(self, client_api: Any, models: List[str], messages=[]):
         if not models:
             raise ValueError("models list cannot be empty")
         self.client_api = client_api
         self.models = models
         self.model = models[0]
-        self.messages = []
+        self.messages = messages
 
     def add_message(self, role: str, message: str):
         self.messages.append({"role": role, "content": message})
@@ -52,8 +52,13 @@ class ClientInterface:
 
 
 class AnthropicClient(ClientInterface):
-    def __init__(self):
-        super().__init__(client_api=anthropic.Anthropic(), models=ANTHROPIC_MODELS)
+    def __init__(self, **kwargs):
+        super().__init__(
+            client_api=anthropic.Anthropic(), models=ANTHROPIC_MODELS, **kwargs
+        )
+
+    def __str__(self):
+        return "Anthropic"
 
     def get_response(self) -> str:
         response = self.client_api.messages.create(
@@ -85,8 +90,11 @@ class AnthropicClient(ClientInterface):
 
 
 class OpenAIClient(ClientInterface):
-    def __init__(self):
-        super().__init__(client_api=openai.OpenAI(), models=OPENAI_MODELS)
+    def __init__(self, **kwargs):
+        super().__init__(client_api=openai.OpenAI(), models=OPENAI_MODELS, **kwargs)
+
+    def __str__(self):
+        return "OpenAI"
 
     def get_response(self) -> str:
         response = self.client_api.chat.completions.create(
