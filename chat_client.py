@@ -1,12 +1,9 @@
 import openai
 import anthropic
 import google.generativeai as genai
-from dotenv import load_dotenv
 from typing import List, Any
 import json
 import tiktoken
-
-load_dotenv()
 
 OPENAI_MODELS = ["gpt-3.5-turbo", "gpt-4-0125-preview", "gpt-4"]
 ANTHROPIC_MODELS = [
@@ -37,7 +34,7 @@ class ClientInterface:
         self,
         client_api: Any,
         models: List[str],
-        messages=[],
+        messages=None,
         max_tokens=1024,
         assistant_role="assistant",
         user_role="user",
@@ -49,7 +46,9 @@ class ClientInterface:
         self.set_model(models[0])
         # Messages are the only private member so far, as the format will be unique to each client.
         # Setter/getter methods will convert as necessary to the shared format
-        self.set_messages(messages)
+        self._messages = []
+        if messages is not None:
+            self.set_messages(messages)
         self.max_tokens = max_tokens
         self.assistant_role = assistant_role
         self.user_role = user_role
@@ -216,37 +215,43 @@ class GoogleClient(ClientInterface):
             yield chunk.text
 
 
-# # Example:
-# print("--- Anthropic ---")
-# client_api = AnthropicClient()
-# client_api.prompt("Hello")
-# for chunk in client_api.stream_generator():
-#     print(chunk, end="", flush=True)
-# print("")
+if __name__ == "__main__":
+    from dotenv import load_dotenv
 
-# print("--- OpenAI ---")
-# client_api = OpenAIClient()
-# client_api.prompt("Hello")
-# for chunk in client_api.stream_generator():
-#     print(chunk, end="", flush=True)
-# print("")
+    load_dotenv()
 
-# print("--- Google ---")
-# client_api = GoogleClient()
-# client_api.prompt("Hello")
-# for chunk in client_api.stream_generator():
-#     print(chunk, end="", flush=True)
-# print("")
+    print("###### Client Hello #######")
+    print("--- Anthropic ---")
+    client = AnthropicClient()
+    client.prompt("Hello")
+    for chunk in client.stream_generator():
+        print(chunk, end="", flush=True)
+    print("")
 
-# # Multi-turn
-# client_api_1 = OpenAIClient()
-# client_api_1.prompt("What is 2 + 2?")
-# print(client_api_1.get_response())
-# print("------------------------")
-# client_api_2 = GoogleClient(messages=client_api_1.get_messages())
-# client_api_2.prompt("And double that?")
-# print(client_api_2.get_response())
-# print("------------------------")
-# client_api_3 = AnthropicClient(messages = client_api_2.get_messages())
-# client_api_3.prompt("And double that?")
-# print(client_api_3.get_response())
+    print("--- OpenAI ---")
+    client = OpenAIClient()
+    client.prompt("Hello")
+    for chunk in client.stream_generator():
+        print(chunk, end="", flush=True)
+    print("")
+
+    print("--- Google ---")
+    client = GoogleClient()
+    client.prompt("Hello")
+    for chunk in client.stream_generator():
+        print(chunk, end="", flush=True)
+    print("")
+
+    print("")
+    print("####### Rotate Clients #######")
+    client_api_1 = OpenAIClient()
+    client_api_1.prompt("What is 2 + 2?")
+    print("OpenAI:", client_api_1.get_response())
+    print("------------------------")
+    client_api_2 = GoogleClient(messages=client_api_1.get_messages())
+    client_api_2.prompt("And double that?")
+    print("Google:", client_api_2.get_response())
+    print("------------------------")
+    client_api_3 = AnthropicClient(messages=client_api_2.get_messages())
+    client_api_3.prompt("And double that?")
+    print("Anthropic:", client_api_3.get_response())

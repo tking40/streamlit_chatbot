@@ -4,3 +4,4 @@ chat_history/
 __pycache__/
 .pytest_cache/
 todo.md
+secrets.toml

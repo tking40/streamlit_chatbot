@@ -2,12 +2,7 @@ import os
 import streamlit as st
 from datetime import datetime
 
-from dotenv import load_dotenv
-
 from chat_client import AnthropicClient, OpenAIClient, GoogleClient
-
-load_dotenv()
-
 
 clients = {
     "Open AI": OpenAIClient,
