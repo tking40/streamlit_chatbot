@@ -63,7 +63,7 @@ def chat_sidebar():
             key="max_tokens",
         )
 
-    with st.sidebar.popover("Load from file"):
+    with st.sidebar.expander("Load from file"):
         st.markdown("load from")
         filenames = [""] + os.listdir(CHAT_HISTORY_DIR)
         filename = st.selectbox("Select a file", filenames)
@@ -73,7 +73,7 @@ def chat_sidebar():
             if st.button("Load"):
                 client.load_from_file(filepath)
 
-    with st.sidebar.popover("Save chat to file"):
+    with st.sidebar.expander("Save chat to file"):
         st.markdown("name")
         if st.button("generate"):
             st.session_state.loaded_file = generate_log_name()
@@ -92,14 +92,14 @@ def chat_sidebar():
 
     st.sidebar.write("Current tokens", client.count_tokens())
 
-    st.sidebar.markdown(
+    with st.sidebar.popover("Usage"):
+        st.markdown(
+            """
+        [Anthropic Usage](https://console.anthropic.com/settings/plans)\n
+        [OpenAI Usage](https://platform.openai.com/usage)\n
+        [Google is free rn](https://ai.google.dev/pricing)
         """
-    ### Usage \n
-    [Anthropic Usage](https://console.anthropic.com/settings/plans)\n
-    [OpenAI Usage](https://platform.openai.com/usage)\n
-    [Google is free rn](https://ai.google.dev/pricing)
-    """
-    )
+        )
 
     return client
 
