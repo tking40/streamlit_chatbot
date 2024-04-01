@@ -220,6 +220,8 @@ class GoogleClient(ClientInterface):
             yield chunk.text
 
     def count_tokens(self):
+        if not self._messages:
+            return 0
         return self.client_api.count_tokens(self._messages).total_tokens
 
 
