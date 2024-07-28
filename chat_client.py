@@ -5,13 +5,12 @@ from typing import List, Any
 import json
 import tiktoken
 
-OPENAI_MODELS = ["gpt-3.5-turbo", "gpt-4-0125-preview", "gpt-4"]
+OPENAI_MODELS = ["gpt-4o", "gpt-3.5-turbo"]
 ANTHROPIC_MODELS = [
     "claude-3-haiku-20240307",
-    "claude-3-sonnet-20240229",
-    "claude-3-opus-20240229",
+    "claude-3-5-sonnet-20240620",
 ]
-GOOGLE_MODELS = ["models/gemini-1.0-pro"]
+GOOGLE_MODELS = ["models/gemini-1.5-flash-latest", "models/gemini-1.5-pro-latest"]
 
 
 def num_tokens_from_messages(messages):
