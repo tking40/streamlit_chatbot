@@ -5,13 +5,34 @@ from typing import List, Any
 import json
 import tiktoken
 
-OPENAI_MODELS = ["gpt-4o", "gpt-3.5-turbo"]
+OPENAI_MODELS = ["gpt-4o-mini", "gpt-4o-2024-08-06"]
 ANTHROPIC_MODELS = [
     "claude-3-haiku-20240307",
     "claude-3-5-sonnet-20240620",
 ]
-GOOGLE_MODELS = ["models/gemini-1.5-flash-latest", "models/gemini-1.5-pro-latest"]
-
+GOOGLE_MODELS = ["gemini-1.5-pro-exp-0801", "models/gemini-1.5-flash-latest", "models/gemini-1.5-pro-latest"]
+google_safety_settings = [
+    {
+        "category": "HARM_CATEGORY_DANGEROUS",
+        "threshold": "BLOCK_NONE",
+    },
+    {
+        "category": "HARM_CATEGORY_HARASSMENT",
+        "threshold": "BLOCK_NONE",
+    },
+    {
+        "category": "HARM_CATEGORY_HATE_SPEECH",
+        "threshold": "BLOCK_NONE",
+    },
+    {
+        "category": "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+        "threshold": "BLOCK_NONE",
+    },
+    {
+        "category": "HARM_CATEGORY_DANGEROUS_CONTENT",
+        "threshold": "BLOCK_NONE",
+    },
+]
 
 def num_tokens_from_messages(messages):
     encoding = tiktoken.get_encoding("cl100k_base")
@@ -214,7 +235,7 @@ class GoogleClient(ClientInterface):
         return response.text
 
     def stream_generator(self):
-        stream = self.client_api.generate_content(self._messages, stream=True)
+        stream = self.client_api.generate_content(self._messages, stream=True, safety_settings=google_safety_settings)
         for chunk in stream:
             yield chunk.text
 

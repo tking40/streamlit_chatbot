@@ -5,9 +5,9 @@ from datetime import datetime
 from chat_client import AnthropicClient, OpenAIClient, GoogleClient
 
 clients = {
+    "Google": GoogleClient,
     "Open AI": OpenAIClient,
     "Claude": AnthropicClient,
-    "Google": GoogleClient,
 }
 
 CHAT_HISTORY_DIR = "./chat_history"
