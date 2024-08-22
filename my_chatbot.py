@@ -20,7 +20,6 @@ def reset():
 
 if "messages" not in st.session_state:
     reset()
-    st.session_state.max_tokens = 1024
 st.set_page_config(layout="wide")
 
 
@@ -53,15 +52,6 @@ def chat_sidebar():
 
     model_name = st.sidebar.selectbox("Choose model:", client.models, key="model")
     client.set_model(model_name)
-
-    with st.sidebar.expander("Advanced Options"):
-        client.max_tokens = st.slider(
-            "Max response tokens:",
-            min_value=128,
-            max_value=1024,
-            step=64,
-            key="max_tokens",
-        )
 
     with st.sidebar.expander("Load from file"):
         st.markdown("load from")

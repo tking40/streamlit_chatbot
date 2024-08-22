@@ -55,7 +55,6 @@ class ClientInterface:
         client_api: Any,
         models: List[str],
         messages=None,
-        max_tokens=1024,
         assistant_role="assistant",
         user_role="user",
     ):
@@ -70,7 +69,6 @@ class ClientInterface:
         self._messages = []
         if messages is not None:
             self.set_messages(messages)
-        self.max_tokens = max_tokens
         self.assistant_role = assistant_role
         self.user_role = user_role
 
@@ -128,7 +126,7 @@ class AnthropicClient(ClientInterface):
     def get_response(self) -> str:
         response = self.client_api.messages.create(
             model=self.model_name,
-            max_tokens=self.max_tokens,
+            max_tokens=1024,
             messages=self._messages,
         )
         message = response.content[0].text
@@ -137,9 +135,9 @@ class AnthropicClient(ClientInterface):
 
     def stream_generator(self):
         stream_manager = self.client_api.messages.stream(
-            max_tokens=self.max_tokens,
-            messages=self._messages,
             model=self.model_name,
+            max_tokens=1024,
+            messages=self._messages,
         )
 
         # Enter the context to get the MessageStream
@@ -166,7 +164,6 @@ class OpenAIClient(ClientInterface):
             model=self.model_name,
             messages=self._messages,
             stream=False,
-            max_tokens=self.max_tokens,
         )
         content = response.choices[0].message.content
         self.add_message(role="assistant", content=content)
@@ -177,7 +174,6 @@ class OpenAIClient(ClientInterface):
             model=self.model_name,
             messages=self._messages,
             stream=True,
-            max_tokens=self.max_tokens,
         )
         for chunk in stream:
             text = chunk.choices[0].delta.content
