@@ -5,7 +5,7 @@ from typing import List, Any
 import json
 import tiktoken
 
-OPENAI_MODELS = ["gpt-4o-mini", "gpt-4o-2024-08-06"]
+OPENAI_MODELS = ["gpt-4o-mini", "gpt-4o", "o1-mini", "o1-preview"]
 ANTHROPIC_MODELS = [
     "claude-3-haiku-20240307",
     "claude-3-5-sonnet-20240620",
