@@ -10,7 +10,7 @@ ANTHROPIC_MODELS = [
     "claude-3-haiku-20240307",
     "claude-3-5-sonnet-20240620",
 ]
-GOOGLE_MODELS = ["gemini-1.5-pro-exp-0801", "models/gemini-1.5-flash-latest", "models/gemini-1.5-pro-latest"]
+GOOGLE_MODELS = ["gemini-1.5-pro-latest", "models/gemini-1.5-flash-latest", "gemini-1.5-pro-exp-0827"]
 google_safety_settings = [
     {
         "category": "HARM_CATEGORY_DANGEROUS",
