@@ -2,12 +2,13 @@ import os
 import streamlit as st
 from datetime import datetime
 
-from chat_client import AnthropicClient, OpenAIClient, GoogleClient
+from chat_client import AnthropicClient, OpenAIClient, GoogleClient, GroqClient
 
 clients = {
     "Google": GoogleClient,
     "Open AI": OpenAIClient,
     "Claude": AnthropicClient,
+    "Groq": GroqClient,
 }
 
 CHAT_HISTORY_DIR = "./chat_history"
@@ -87,7 +88,8 @@ def chat_sidebar():
             """
         [Anthropic Usage](https://console.anthropic.com/settings/plans)\n
         [OpenAI Usage](https://platform.openai.com/usage)\n
-        [Google is free rn](https://ai.google.dev/pricing)
+        [Google is free rn](https://ai.google.dev/pricing)\n
+        [Groq, also has free tier](https://console.groq.com/settings/usage)
         """
         )
 

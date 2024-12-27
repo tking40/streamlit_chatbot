@@ -1,4 +1,5 @@
 import openai
+import groq
 import anthropic
 import google.generativeai as genai
 from typing import List, Any
@@ -6,11 +7,16 @@ import json
 import tiktoken
 
 OPENAI_MODELS = ["gpt-4o-mini", "gpt-4o", "o1-mini", "o1-preview"]
+GROQ_MODELS = ["llama-3.3-70b-versatile", "gemma2-9b-it"]
 ANTHROPIC_MODELS = [
     "claude-3-haiku-20240307",
     "claude-3-5-sonnet-20240620",
 ]
-GOOGLE_MODELS = ["gemini-1.5-pro-latest", "models/gemini-1.5-flash-latest", "gemini-1.5-pro-exp-0827"]
+GOOGLE_MODELS = [
+    "gemini-1.5-pro-latest",
+    "models/gemini-1.5-flash-latest",
+    "gemini-1.5-pro-exp-0827",
+]
 google_safety_settings = [
     {
         "category": "HARM_CATEGORY_DANGEROUS",
@@ -33,6 +39,7 @@ google_safety_settings = [
         "threshold": "BLOCK_NONE",
     },
 ]
+
 
 def num_tokens_from_messages(messages):
     encoding = tiktoken.get_encoding("cl100k_base")
@@ -153,8 +160,8 @@ class AnthropicClient(ClientInterface):
 
 
 class OpenAIClient(ClientInterface):
-    def __init__(self, **kwargs):
-        super().__init__(client_api=openai.OpenAI(), models=OPENAI_MODELS, **kwargs)
+    def __init__(self, client_api=openai.OpenAI(), models=OPENAI_MODELS, **kwargs):
+        super().__init__(client_api=client_api, models=models, **kwargs)
 
     def __str__(self):
         return "OpenAI"
@@ -179,6 +186,14 @@ class OpenAIClient(ClientInterface):
             text = chunk.choices[0].delta.content
             if text:
                 yield text
+
+
+class GroqClient(OpenAIClient):
+    def __init__(self, client_api=groq.Groq(), models=GROQ_MODELS, **kwargs):
+        super().__init__(client_api=client_api, models=models, **kwargs)
+
+    def __str__(self):
+        return "Groq"
 
 
 def chat_history_to_messages(history):
@@ -231,7 +246,9 @@ class GoogleClient(ClientInterface):
         return response.text
 
     def stream_generator(self):
-        stream = self.client_api.generate_content(self._messages, stream=True, safety_settings=google_safety_settings)
+        stream = self.client_api.generate_content(
+            self._messages, stream=True, safety_settings=google_safety_settings
+        )
         for chunk in stream:
             yield chunk.text
 
