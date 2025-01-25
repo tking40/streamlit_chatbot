@@ -9,8 +9,8 @@ import tiktoken
 OPENAI_MODELS = ["gpt-4o-mini", "gpt-4o", "o1-mini", "o1-preview"]
 GROQ_MODELS = ["llama-3.3-70b-versatile", "gemma2-9b-it"]
 ANTHROPIC_MODELS = [
-    "claude-3-haiku-20240307",
-    "claude-3-5-sonnet-20240620",
+    "claude-3-5-haiku-latest",
+    "claude-3-5-sonnet-latest",
 ]
 GOOGLE_MODELS = [
     "gemini-1.5-pro-latest",
