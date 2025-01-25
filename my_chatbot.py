@@ -2,24 +2,20 @@ import os
 import streamlit as st
 from datetime import datetime
 
-from chat_client import AnthropicClient, OpenAIClient, GoogleClient, GroqClient
-
-clients = {
-    "Google": GoogleClient,
-    "Open AI": OpenAIClient,
-    "Claude": AnthropicClient,
-    "Groq": GroqClient,
-}
+from chat_client import LiteLLMClient
 
 CHAT_HISTORY_DIR = "./chat_history"
 
 
 def reset():
-    st.session_state.messages = []
+    if "client" in st.session_state:
+        st.session_state.client.reset()
+    else:
+        st.session_state.client = LiteLLMClient()
     st.session_state.loaded_file = ""
 
 
-if "messages" not in st.session_state:
+if "client" not in st.session_state:
     reset()
 st.set_page_config(layout="wide")
 
@@ -27,32 +23,30 @@ st.set_page_config(layout="wide")
 st.title("chatting")
 
 
-def generate_log_name():
+def generate_log_name(client):
     prompt = "Please summarize our conversation so that it fits within a short filename. For example, if we talked about turtle migration, use this format: 'turtle_migration', with no special characters"
-    if not st.session_state.messages:
-        return "empty"
 
-    temp_client = GoogleClient(messages=st.session_state.messages.copy())
+    temp_client = client.copy()
     temp_client.prompt(prompt)
 
     return temp_client.get_response()
 
 
-def get_client():
-    client = clients[st.session_state.client_name]
-    return client(messages=st.session_state.messages)
-
-
 def chat_sidebar():
+    client = st.session_state.client
+
     if st.sidebar.button("New Chat"):
+        client.reset()
         reset()
 
-    st.sidebar.selectbox("Choose client", clients.keys(), key="client_name")
+    provider_name = st.sidebar.selectbox(
+        "Choose provider", client.provider_models.keys(), key="provider"
+    )
 
-    client = get_client()
-
-    model_name = st.sidebar.selectbox("Choose model:", client.models, key="model")
-    client.set_model(model_name)
+    model_name = st.sidebar.selectbox(
+        "Choose model:", client.provider_models[provider_name], key="model"
+    )
+    client.set_model(provider_name=provider_name, model_name=model_name)
 
     with st.sidebar.expander("Load from file"):
         st.markdown("load from")
@@ -128,10 +122,6 @@ def chat_app():
 
         client.add_message(role=client.assistant_role, content=response)
 
-    # Chat finished, save messages
-    # note: client should be writing to same message list, but observed odd behavior without this
-    st.session_state.messages = client.get_messages()
-
 
 tab1, tab2 = st.tabs(["chat", "dalle"])
 
@@ -140,10 +130,9 @@ with tab1:
 
 with tab2:
     prompt = st.text_input("prompt")
-    client = OpenAIClient()
     if st.button("generate image"):
         with st.spinner("Generating..."):
-            response = client.client_api.images.generate(
+            response = st.session_state.client.client_api.image_generation(
                 model="dall-e-3",
                 prompt=prompt,
                 size="1024x1024",

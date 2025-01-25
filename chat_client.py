@@ -1,10 +1,9 @@
-import openai
-import groq
-import anthropic
-import google.generativeai as genai
-from typing import List, Any
+import litellm
+
+from typing import List, Any, Dict
 import json
 import tiktoken
+
 
 OPENAI_MODELS = ["gpt-4o-mini", "gpt-4o", "o1-mini", "o1-preview"]
 GROQ_MODELS = ["llama-3.3-70b-versatile", "gemma2-9b-it"]
@@ -12,16 +11,21 @@ ANTHROPIC_MODELS = [
     "claude-3-5-haiku-latest",
     "claude-3-5-sonnet-latest",
 ]
-GOOGLE_MODELS = [
+GEMINI_MODELS = [
     "gemini-1.5-pro-latest",
-    "models/gemini-1.5-flash-latest",
+    "gemini-1.5-flash-latest",
     "gemini-1.5-pro-exp-0827",
 ]
+
+PROVIDER_MODELS = {
+    "gemini": GEMINI_MODELS,
+    "openai": OPENAI_MODELS,
+    "anthropic": ANTHROPIC_MODELS,
+    "groq": GROQ_MODELS,
+}
+DEFAULT_MODEL_NAME = "gemini/gemini-1.5-flash-latest"
+
 google_safety_settings = [
-    {
-        "category": "HARM_CATEGORY_DANGEROUS",
-        "threshold": "BLOCK_NONE",
-    },
     {
         "category": "HARM_CATEGORY_HARASSMENT",
         "threshold": "BLOCK_NONE",
@@ -60,17 +64,15 @@ class ClientInterface:
     def __init__(
         self,
         client_api: Any,
-        models: List[str],
+        provider_models: Dict[str, List[str]],
         messages=None,
         assistant_role="assistant",
         user_role="user",
     ):
-        if not models:
-            raise ValueError("models list cannot be empty")
+        if not provider_models:
+            raise ValueError("provider_models dict cannot be empty")
         self.client_api = client_api
-        self.models = models
-        self.model_name = None
-        self.set_model(models[0])
+        self.provider_models = provider_models
         # Messages are the only private member so far, as the format will be unique to each client.
         # Setter/getter methods will convert as necessary to the shared format
         self._messages = []
@@ -88,10 +90,11 @@ class ClientInterface:
     def set_messages(self, messages):
         self._messages = messages
 
-    def set_model(self, model_name):
-        if self.model_name == model_name:
-            return
-        self.model_name = model_name
+    def set_model(self, model_name, provider_name=None):
+        if provider_name is not None:
+            self.model_name = f"{provider_name}/{model_name}"
+        else:
+            self.model_name = model_name
 
     def get_response(self):
         raise NotImplementedError("get_response not implemented!")
@@ -121,180 +124,56 @@ class ClientInterface:
         return num_tokens_from_messages(self.get_messages())
 
 
-class AnthropicClient(ClientInterface):
-    def __init__(self, **kwargs):
+class LiteLLMClient(ClientInterface):
+    def __init__(self, client_api=litellm, provider_models=PROVIDER_MODELS, **kwargs):
         super().__init__(
-            client_api=anthropic.Anthropic(), models=ANTHROPIC_MODELS, **kwargs
+            client_api=client_api, provider_models=provider_models, **kwargs
         )
+        self.set_model(DEFAULT_MODEL_NAME)
 
     def __str__(self):
-        return "Anthropic"
+        return "LiteLLM"
 
-    def get_response(self) -> str:
-        response = self.client_api.messages.create(
-            model=self.model_name,
-            max_tokens=1024,
-            messages=self._messages,
-        )
-        message = response.content[0].text
-        self.add_message(role="assistant", content=message)
-        return message
+    def model_kwargs(self):
+        kwargs = {}
+        if self.model_name in GEMINI_MODELS:
+            kwargs["safety_settings"] = google_safety_settings
+        return kwargs
 
-    def stream_generator(self):
-        stream_manager = self.client_api.messages.stream(
-            model=self.model_name,
-            max_tokens=1024,
-            messages=self._messages,
-        )
-
-        # Enter the context to get the MessageStream
-        stream = stream_manager.__enter__()
-
-        try:
-            # Yield text from the stream
-            for text in stream.text_stream:
-                yield text
-        finally:
-            # Exit the context and clean up the stream
-            stream_manager.__exit__(None, None, None)
-
-
-class OpenAIClient(ClientInterface):
-    def __init__(self, client_api=openai.OpenAI(), models=OPENAI_MODELS, **kwargs):
-        super().__init__(client_api=client_api, models=models, **kwargs)
-
-    def __str__(self):
-        return "OpenAI"
-
-    def get_response(self) -> str:
-        response = self.client_api.chat.completions.create(
+    def get_response(self) -> Any:
+        response = self.client_api.completion(
             model=self.model_name,
             messages=self._messages,
-            stream=False,
+            **self.model_kwargs(),
         )
         content = response.choices[0].message.content
-        self.add_message(role="assistant", content=content)
         return content
 
     def stream_generator(self):
-        stream = self.client_api.chat.completions.create(
+        response = self.client_api.completion(
             model=self.model_name,
             messages=self._messages,
             stream=True,
+            **self.model_kwargs(),
         )
-        for chunk in stream:
+        for chunk in response:
             text = chunk.choices[0].delta.content
             if text:
                 yield text
-
-
-class GroqClient(OpenAIClient):
-    def __init__(self, client_api=groq.Groq(), models=GROQ_MODELS, **kwargs):
-        super().__init__(client_api=client_api, models=models, **kwargs)
-
-    def __str__(self):
-        return "Groq"
-
-
-def chat_history_to_messages(history):
-    return [
-        {
-            "role": "user" if m["role"] == "user" else "assistant",
-            "content": m["parts"][0],
-        }
-        for m in history
-    ]
-
-
-def messages_to_chat_history(messages):
-    history = [
-        {"role": "user" if m["role"] == "user" else "model", "parts": [m["content"]]}
-        for m in messages
-    ]
-    return history
-
-
-class GoogleClient(ClientInterface):
-    def __init__(self, **kwargs):
-        genai.configure()
-        # client api is configured in set_model
-        super().__init__(
-            client_api=None, models=GOOGLE_MODELS, assistant_role="model", **kwargs
-        )
-
-    def __str__(self):
-        return "Google"
-
-    def add_message(self, role: str, content: str):
-        self._messages.append({"role": role, "parts": [content]})
-
-    def get_messages(self):
-        return chat_history_to_messages(self._messages)
-
-    def set_messages(self, messages):
-        self._messages = messages_to_chat_history(messages)
-
-    def set_model(self, model_name):
-        if self.model_name == model_name:
-            return
-        self.model_name = model_name
-        self.client_api = genai.GenerativeModel(self.model_name)
-
-    def get_response(self) -> str:
-        response = self.client_api.generate_content(self._messages)
-        self.add_message(role=self.assistant_role, content=response.text)
-        return response.text
-
-    def stream_generator(self):
-        stream = self.client_api.generate_content(
-            self._messages, stream=True, safety_settings=google_safety_settings
-        )
-        for chunk in stream:
-            yield chunk.text
-
-    def count_tokens(self):
-        if not self._messages:
-            return 0
-        return self.client_api.count_tokens(self._messages).total_tokens
 
 
 if __name__ == "__main__":
     from dotenv import load_dotenv
 
     load_dotenv()
-
-    print("###### Client Hello #######")
-    print("--- Anthropic ---")
-    client = AnthropicClient()
-    client.prompt("Hello")
-    for chunk in client.stream_generator():
-        print(chunk, end="", flush=True)
-    print("")
-
-    print("--- OpenAI ---")
-    client = OpenAIClient()
-    client.prompt("Hello")
-    for chunk in client.stream_generator():
-        print(chunk, end="", flush=True)
-    print("")
-
-    print("--- Google ---")
-    client = GoogleClient()
-    client.prompt("Hello")
-    for chunk in client.stream_generator():
-        print(chunk, end="", flush=True)
-    print("")
-
+    client = LiteLLMClient()
     print("")
     print("####### Rotate Clients #######")
-    client_api_1 = OpenAIClient()
-    client_api_1.prompt("What is 2 + 2?")
-    print("OpenAI:", client_api_1.get_response())
+    client.prompt("What is 2 + 2?")
+    print("Client:", client.get_response())
     print("------------------------")
-    client_api_2 = GoogleClient(messages=client_api_1.get_messages())
-    client_api_2.prompt("And double that?")
-    print("Google:", client_api_2.get_response())
-    print("------------------------")
-    client_api_3 = AnthropicClient(messages=client_api_2.get_messages())
-    client_api_3.prompt("And double that?")
-    print("Anthropic:", client_api_3.get_response())
+    client.prompt("And double that?")
+    print("Client:", end=" ")
+    for chunk in client.stream_generator():
+        print(chunk, end="", flush=True)
+    print("")
