@@ -6,10 +6,15 @@ import tiktoken
 
 
 OPENAI_MODELS = ["gpt-4o-mini", "gpt-4o", "o1-mini", "o1-preview"]
-GROQ_MODELS = ["llama-3.3-70b-versatile", "gemma2-9b-it"]
+GROQ_MODELS = [
+    "llama-3.3-70b-versatile",
+    "gemma2-9b-it",
+    "deepseek-r1-distill-llama-70b",
+]
 ANTHROPIC_MODELS = [
     "claude-3-5-haiku-latest",
     "claude-3-5-sonnet-latest",
+    "claude-3-7-sonnet-latest",
 ]
 GEMINI_MODELS = [
     "gemini-1.5-pro-latest",

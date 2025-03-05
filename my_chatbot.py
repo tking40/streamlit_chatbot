@@ -39,13 +39,25 @@ def chat_sidebar():
         client.reset()
         reset()
 
-    provider_name = st.sidebar.selectbox(
-        "Choose provider", client.provider_models.keys(), key="provider"
+    popular_options = {
+        "sonnet3.7": ("anthropic", "claude-3-7-sonnet-latest"),
+        "4o-mini": ("openai", "gpt-4o-mini"),
+    }
+    options = popular_options.keys()
+    selection = st.sidebar.segmented_control(
+        "Popular Choices", options, selection_mode="single"
     )
 
-    model_name = st.sidebar.selectbox(
-        "Choose model:", client.provider_models[provider_name], key="model"
-    )
+    if selection:
+        provider_name, model_name = popular_options[selection]
+    else:
+        provider_name = st.sidebar.selectbox(
+            "Choose provider", client.provider_models.keys(), key="provider"
+        )
+
+        model_name = st.sidebar.selectbox(
+            "Choose model:", client.provider_models[provider_name], key="model"
+        )
     client.set_model(provider_name=provider_name, model_name=model_name)
 
     with st.sidebar.expander("Load from file"):
@@ -67,13 +79,12 @@ def chat_sidebar():
 
         ymd = datetime.now().strftime("%y-%m-%d_%H-%M-%S")
 
-        if st.button(f"Save"):
-            if not ".json" in filename:
-                filename = f"{ymd}_{name}.json"
+        if st.button("Save"):
+            filename = name if name.endswith(".json") else f"{ymd}_{name}.json"
             st.session_state.loaded_file = filename
             filepath = os.path.join(CHAT_HISTORY_DIR, filename)
             client.save_to_file(filepath)
-            st.write(f"saved to: {filepath}")
+            st.success(f"Chat history saved to: {filepath}")
 
     st.sidebar.write("Current tokens", client.count_tokens())
 
