@@ -5,7 +5,7 @@ import json
 import tiktoken
 
 
-OPENAI_MODELS = ["gpt-4o-mini", "gpt-4o", "o1-mini", "o1-preview"]
+OPENAI_MODELS = ["gpt-4o-mini", "gpt-4o", "o1-mini", "o1-preview", "gpt-4.5-preview-2025-02-27"]
 GROQ_MODELS = [
     "llama-3.3-70b-versatile",
     "gemma2-9b-it",
@@ -18,10 +18,9 @@ ANTHROPIC_MODELS = [
 ]
 GEMINI_MODELS = [
     "gemini-1.5-pro-latest",
-    "gemini-1.5-flash-latest",
-    "gemini-1.5-pro-exp-0827",
+    "gemini-2.0-flash",
+    "gemini-2.0-flash-lite",
 ]
-
 
 PROVIDER_MODELS = {
     "gemini": GEMINI_MODELS,
