@@ -42,6 +42,7 @@ def chat_sidebar():
     popular_options = {
         "sonnet3.7": ("anthropic", "claude-3-7-sonnet-latest"),
         "4o-mini": ("openai", "gpt-4o-mini"),
+        "flash2.0": ("gemini", "gemini-2.0-flash")
     }
     options = popular_options.keys()
     selection = st.sidebar.segmented_control(
@@ -59,6 +60,10 @@ def chat_sidebar():
             "Choose model:", client.provider_models[provider_name], key="model"
         )
     client.set_model(provider_name=provider_name, model_name=model_name)
+
+    system_prompt = st.sidebar.text_area("System Prompt")
+    if system_prompt:
+        client.add_message("system", system_prompt)
 
     with st.sidebar.expander("Load from file"):
         st.markdown("load from")
@@ -111,6 +116,8 @@ def chat_app():
     # Display chat messages from history on app rerun
     with container_A:
         for message in client.get_messages():
+            if message["role"] == "system":
+                continue
             chat_msg = st.chat_message(message["role"])
             chat_msg.markdown(message["content"])
 

@@ -22,6 +22,7 @@ GEMINI_MODELS = [
     "gemini-1.5-pro-exp-0827",
 ]
 
+
 PROVIDER_MODELS = {
     "gemini": GEMINI_MODELS,
     "openai": OPENAI_MODELS,
@@ -73,6 +74,7 @@ class ClientInterface:
         messages=None,
         assistant_role="assistant",
         user_role="user",
+        system_prompt="",
     ):
         if not provider_models:
             raise ValueError("provider_models dict cannot be empty")
@@ -81,8 +83,10 @@ class ClientInterface:
         # Messages are the only private member so far, as the format will be unique to each client.
         # Setter/getter methods will convert as necessary to the shared format
         self._messages = []
+        if system_prompt:
+            self.add_message(role="system", content=system_prompt)
         if messages is not None:
-            self.set_messages(messages)
+            self._messages.extend(messages)
         self.assistant_role = assistant_role
         self.user_role = user_role
 
